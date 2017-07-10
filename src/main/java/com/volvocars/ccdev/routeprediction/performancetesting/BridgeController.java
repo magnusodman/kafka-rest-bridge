@@ -1,14 +1,20 @@
 package com.volvocars.ccdev.routeprediction.performancetesting;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
 
 @RestController
 public class BridgeController {
@@ -18,13 +24,15 @@ public class BridgeController {
     @Autowired
     private KafkaTemplate<String,Object> kafkaTemplate;
 
-    @RequestMapping("/send")
-    public void send() {
-        //LOGGER.info("Hit send endpoint");
+    @RequestMapping(value = "/send", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public void send(@RequestBody String positionMessageString) throws IOException {
+        LOGGER.info("Hit send endpoint {}", positionMessageString);
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        PositionMessage positionMessage = objectMapper.readValue(positionMessageString, PositionMessage.class);
         String topic = "bridgetopic.t";
         String message = "Message from controller";
-        kafkaTemplate.send(topic, "YV12345678", message);
+        kafkaTemplate.send(topic, positionMessage.getVin(), objectMapper.writeValueAsString(positionMessage));
 
         /*
         ListenableFuture<SendResult<String, Object>> future = kafkaTemplate.send(topic, message);
